@@ -79,8 +79,7 @@ export async function install(options) {
   const installer = getInstaller(options);
   let release;
   let version = options.version;
-  if (version.toLowerCase() === 'git' || 
-      version.toLowerCase() === 'release') {
+  if (version.toLowerCase() === 'git' || version.toLowerCase() === 'release') {
     release = await installer.getLatestRelease();
     version = release.version;
   }

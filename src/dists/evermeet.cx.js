@@ -6,7 +6,7 @@ import * as tc from '@actions/tool-cache';
 import {fetch} from 'undici';
 import {v4 as uuidV4} from 'uuid';
 
-import {USER_AGENT, cleanVersion, getTempDir} from '../util';
+import {USER_AGENT, cleanVersion, getTempDir, retryWithExponentialBackoff} from '../util';
 
 export class EvermeetCxInstaller {
   /**
@@ -23,11 +23,13 @@ export class EvermeetCxInstaller {
    * @private
    */
   async getVersionAndUrls(url) {
-    const res = await fetch(url, {
-      headers: {
-        'user-agent': USER_AGENT,
-      },
-    });
+    const res = await retryWithExponentialBackoff(() =>
+      fetch(url, {
+        headers: {
+          'user-agent': USER_AGENT,
+        },
+      }),
+    );
     if (!res.ok) return null;
     const data = /** @type {*} */ (await res.json());
     return {

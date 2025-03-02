@@ -4,7 +4,7 @@ import * as tc from '@actions/tool-cache';
 import * as core from '@actions/core';
 import {fetch} from 'undici';
 
-import {USER_AGENT, cleanVersion, normalizeVersion} from '../util';
+import {USER_AGENT, cleanVersion, normalizeVersion, retryWithExponentialBackoff} from '../util';
 import {readdir} from 'fs/promises';
 import * as path from 'path';
 
@@ -28,11 +28,13 @@ export class JohnVanSickleInstaller {
     const url = isGitBuild
       ? 'https://johnvansickle.com/ffmpeg/git-readme.txt'
       : 'https://johnvansickle.com/ffmpeg/release-readme.txt';
-    const res = await fetch(url, {
-      headers: {
-        'user-agent': USER_AGENT,
-      },
-    });
+    const res = await retryWithExponentialBackoff(() =>
+      fetch(url, {
+        headers: {
+          'user-agent': USER_AGENT,
+        },
+      }),
+    );
     const readme = res.ok && (await res.text());
     assert.ok(readme, 'Failed to get latest johnvansickle ffmpeg release');
     const versionMatch = readme.match(/version: (.+)\n/);
@@ -61,15 +63,19 @@ export class JohnVanSickleInstaller {
       },
       redirect: 'manual',
     };
-    let res = await fetch(
-      `https://johnvansickle.com/ffmpeg/releases/ffmpeg-${version}-${this.getArch()}-static.tar.xz`,
-      init,
+    let res = await retryWithExponentialBackoff(() =>
+      fetch(
+        `https://johnvansickle.com/ffmpeg/releases/ffmpeg-${version}-${this.getArch()}-static.tar.xz`,
+        init,
+      ),
     );
     // Check in old releases if not available
     if (!res.ok) {
-      res = await fetch(
-        `https://johnvansickle.com/ffmpeg/old-releases/ffmpeg-${version}-${this.getArch()}-static.tar.xz`,
-        init,
+      res = await retryWithExponentialBackoff(() =>
+        fetch(
+          `https://johnvansickle.com/ffmpeg/old-releases/ffmpeg-${version}-${this.getArch()}-static.tar.xz`,
+          init,
+        ),
       );
     }
     if (!res.ok) return null;

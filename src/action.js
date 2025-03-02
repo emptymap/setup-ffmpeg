@@ -26,16 +26,19 @@ async function run() {
     const version = core.getInput(INPUT_FFMPEG_VERSION);
     const arch = core.getInput(INPUT_ARCHITECTURE) || os.arch();
     const githubToken = core.getInput(INPUT_GITHUB_TOKEN);
-    const linkingType = core.getInput(INPUT_LINKING_TYPE) || "static";
+    const linkingType = core.getInput(INPUT_LINKING_TYPE) || 'static';
 
-    assert.ok(["static", "shared"].includes(linkingType), 'Unsupported linking type (use static or shared)');
+    assert.ok(
+      ['static', 'shared'].includes(linkingType),
+      'Unsupported linking type (use static or shared)',
+    );
 
     const output = await install({
       version,
       githubToken,
       arch,
       toolCacheDir: 'ffmpeg',
-      linkingType
+      linkingType,
     });
 
     const binaryExt = os.platform() === 'win32' ? '.exe' : '';

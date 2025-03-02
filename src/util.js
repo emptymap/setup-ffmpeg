@@ -48,3 +48,45 @@ export function cleanVersion(version) {
   const clean = semver.clean(version);
   return (clean && clean.replace(/\.0+$/, '')) || version;
 }
+
+/**
+ * Retries a function with exponential backoff.
+ *
+ * @param fn {Function} The function to retry.
+ * @param isRecoverable {Function} A function that returns true if the error is recoverable.
+ * @param retries {number} The number of retries.
+ * @param delay {number} The initial delay in milliseconds.
+ * @returns {Promise<any>}
+ */
+export async function retryWithExponentialBackoff(
+  fn,
+  isRecoverable = isFetchErrorRecoverable,
+  retries = 5,
+  delay = 1000,
+) {
+  let attempt = 0;
+
+  while (attempt < retries) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (!isRecoverable(error)) throw error;
+      attempt++;
+      if (attempt >= retries) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      delay *= 2; // Exponential backoff
+    }
+  }
+}
+
+/**
+ * Returns true if the error is a recoverable fetch error.
+ *
+ * @param error {Error}
+ * @returns {boolean}
+ */
+export function isFetchErrorRecoverable(error) {
+  return error instanceof Error && error.message.includes('fetch failed');
+}

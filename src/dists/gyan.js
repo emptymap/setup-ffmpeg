@@ -6,7 +6,7 @@ import * as tc from '@actions/tool-cache';
 import {Octokit} from '@octokit/core';
 import {fetch} from 'undici';
 
-import {USER_AGENT, _7ZR_PATH, normalizeVersion} from '../util.js';
+import {USER_AGENT, _7ZR_PATH, normalizeVersion, retryWithExponentialBackoff} from '../util.js';
 
 export class GyanInstaller {
   /**
@@ -32,11 +32,13 @@ export class GyanInstaller {
     const url = isGitBuild
       ? 'https://www.gyan.dev/ffmpeg/builds/git-version'
       : 'https://www.gyan.dev/ffmpeg/builds/release-version';
-    const res = await fetch(url, {
-      headers: {
-        'user-agent': USER_AGENT,
-      },
-    });
+    const res = await retryWithExponentialBackoff(() =>
+      fetch(url, {
+        headers: {
+          'user-agent': USER_AGENT,
+        },
+      }),
+    );
     const versionText = res.ok && (await res.text());
     assert.ok(versionText, 'Cannot get latest release');
     const version = normalizeVersion(versionText.trim(), isGitBuild);
